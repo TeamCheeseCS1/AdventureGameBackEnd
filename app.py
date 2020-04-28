@@ -39,8 +39,8 @@ def get_player_by_header(world, auth_header):
     return player
 
 @app.route('/')
-    def root:
-        return "nothin"
+def root():
+    return "nothin"
 @app.route('/api/registration/', methods=['POST'])
 def register():
     values = request.get_json()
@@ -148,4 +148,4 @@ def rooms():
 
 # Run the program on port 5000
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug = True)
