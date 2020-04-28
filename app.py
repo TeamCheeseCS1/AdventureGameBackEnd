@@ -57,6 +57,9 @@ def register():
     else:
         return jsonify(response), 200
 
+@app.route('/')
+def root():
+    return "nothin"
 @app.route('/api/login/', methods=['POST'])
 def login():
     # IMPLEMENT THIS
@@ -143,6 +146,6 @@ def rooms():
     return jsonify(response), 400
 
 
-# # Run the program on port 5000
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=5000)
+# Run the program on port 5000
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
