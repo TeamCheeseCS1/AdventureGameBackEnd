@@ -1,2 +1,1 @@
-web:gunicorn --workers=1 app:app
-heroku ps:scale web=1
+web: gunicorn app:APP -t
