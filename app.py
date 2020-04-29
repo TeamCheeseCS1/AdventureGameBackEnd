@@ -11,20 +11,101 @@ from room import Room
 from player import Player
 from world import World
 
+from models import *
+from flask_sqlalchemy import SQLAlchemy
+
 # Look up decouple for config variables
-pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config('PUSHER_KEY'), secret=config('PUSHER_SECRET'), cluster=config('PUSHER_CLUSTER'))
+pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
+    'PUSHER_KEY'), secret=config('PUSHER_SECRET'), cluster=config('PUSHER_CLUSTER'))
 
 world = World()
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///game.db"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+
+class Player(db.Model):
+    __tablename__ = 'player'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(), nullable=False)
+    password = db.Column(db.String(), nullable=False)
+    location_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=True)
+
+    def __init__(self, username, password, location_id=None):
+        self.username = username
+        self.password = password
+        self.location_room_id = location_id
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
+
+
+class Room(db.Model):
+    __tablename__ = 'room'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(), nullable=False)
+    description = db.Column(db.String(), nullable=True)
+    exit_north_room_id = db.Column(db.Integer, nullable=True)
+    exit_south_room_id = db.Column(db.Integer, nullable=True)
+    exit_west_room_id = db.Column(db.Integer, nullable=True)
+    exit_east_room_id = db.Column(db.Integer, nullable=True)
+
+    def __init__(self, title, description, exit_north_room_id, exit_south_room_id, exit_west_room_id,
+                 exit_east_room_id):
+        self.title = title
+        self.description = description
+        self.exit_north_room_id = exit_north_room_id
+        self.exit_south_room_id = exit_south_room_id
+        self.exit_west_room_id = exit_west_room_id
+        self.exit_east_room_id = exit_east_room_id
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
+
+
+class Item(db.Model):
+    __tablename__ = 'item'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(), nullable=False)
+    location_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=True)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=True)
+
+    def __init__(self, name, location_room_id, player_id, shop_id):
+        self.name = name
+        self.location_room_id = location_room_id
+        self.player_id = player_id
+        self.shop_id = shop_id
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
+
+
+class Shop(db.Model):
+    __tablename__ = 'shop'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(), unique=True, nullable=False)
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
 
 @app.after_request
 def after_request(response):
-  response.headers.add('Access-Control-Allow-Origin', '*')
-  response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-  response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  response.headers.add('Access-Control-Allow-Credentials', 'true')
-  return response
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 
 def get_player_by_header(world, auth_header):
@@ -37,6 +118,7 @@ def get_player_by_header(world, auth_header):
 
     player = world.get_player_by_auth(auth_key[1])
     return player
+
 
 @app.route('/api/registration/', methods=['POST'])
 def register():
@@ -51,16 +133,21 @@ def register():
     password1 = values.get('password1')
     password2 = values.get('password2')
 
+    new_user = Player(username=username, password=password1, location_id=None)
+    db.session.add(new_user)
+    db.session.commit()
+
     response = world.add_player(username, password1, password2)
     if 'error' in response:
         return jsonify(response), 500
     else:
         return jsonify(response), 200
 
+
 @app.route('/')
 def root():
-    response = {'error':'No request'}
-    return jsonify(response), 400
+    return "nothin"
+
 
 @app.route('/api/login/', methods=['POST'])
 def login():
@@ -119,6 +206,7 @@ def take_item():
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
+
 @app.route('/api/adv/drop/', methods=['POST'])
 def drop_item():
     # request item from player inventory
@@ -127,11 +215,13 @@ def drop_item():
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
+
 @app.route('/api/adv/inventory/', methods=['GET'])
 def inventory():
     # request items from player inventory
     response = {'error': "Not implemented"}
     return jsonify(response), 400
+
 
 @app.route('/api/adv/buy/', methods=['POST'])
 def buy_item():
@@ -139,11 +229,13 @@ def buy_item():
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
+
 @app.route('/api/adv/sell/', methods=['POST'])
 def sell_item():
     # IMPLEMENT THIS
     response = {'error': "Not implemented"}
     return jsonify(response), 400
+
 
 @app.route('/api/adv/rooms/', methods=['GET'])
 def rooms():
