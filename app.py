@@ -59,7 +59,9 @@ def register():
 
 @app.route('/')
 def root():
-    return "nothin"
+    response = {'error':'No request'}
+    return jsonify(response), 400
+
 @app.route('/api/login/', methods=['POST'])
 def login():
     # IMPLEMENT THIS
@@ -111,19 +113,23 @@ def move():
 
 @app.route('/api/adv/take/', methods=['POST'])
 def take_item():
-    # IMPLEMENT THIS
+    # request item from room
+    # if none return appropriate response
+    #  put into player inventory
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
 @app.route('/api/adv/drop/', methods=['POST'])
 def drop_item():
-    # IMPLEMENT THIS
+    # request item from player inventory
+    # if none return error
+    # put into room inventory
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
 @app.route('/api/adv/inventory/', methods=['GET'])
 def inventory():
-    # IMPLEMENT THIS
+    # request items from player inventory
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
@@ -148,4 +154,4 @@ def rooms():
 
 # Run the program on port 5000
 if __name__ == '__main__':
-    app.run(config('PORT'))
+    app.run(port=config('PORT'))
