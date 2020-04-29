@@ -11,20 +11,29 @@ from room import Room
 from player import Player
 from world import World
 
+from flask_sqlalchemy import SQLAlchemy
+
 # Look up decouple for config variables
-pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config('PUSHER_KEY'), secret=config('PUSHER_SECRET'), cluster=config('PUSHER_CLUSTER'))
+pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
+    'PUSHER_KEY'), secret=config('PUSHER_SECRET'), cluster=config('PUSHER_CLUSTER'))
 
 world = World()
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = config('DB_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+from models import Player
 
 @app.after_request
 def after_request(response):
-  response.headers.add('Access-Control-Allow-Origin', '*')
-  response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-  response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  response.headers.add('Access-Control-Allow-Credentials', 'true')
-  return response
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 
 def get_player_by_header(world, auth_header):
@@ -37,6 +46,7 @@ def get_player_by_header(world, auth_header):
 
     player = world.get_player_by_auth(auth_key[1])
     return player
+
 
 @app.route('/api/registration/', methods=['POST'])
 def register():
@@ -57,9 +67,12 @@ def register():
     else:
         return jsonify(response), 200
 
+
 @app.route('/')
 def root():
     return "nothin"
+
+
 @app.route('/api/login/', methods=['POST'])
 def login():
     # IMPLEMENT THIS
@@ -115,11 +128,13 @@ def take_item():
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
+
 @app.route('/api/adv/drop/', methods=['POST'])
 def drop_item():
     # IMPLEMENT THIS
     response = {'error': "Not implemented"}
     return jsonify(response), 400
+
 
 @app.route('/api/adv/inventory/', methods=['GET'])
 def inventory():
@@ -127,17 +142,20 @@ def inventory():
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
+
 @app.route('/api/adv/buy/', methods=['POST'])
 def buy_item():
     # IMPLEMENT THIS
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
+
 @app.route('/api/adv/sell/', methods=['POST'])
 def sell_item():
     # IMPLEMENT THIS
     response = {'error': "Not implemented"}
     return jsonify(response), 400
+
 
 @app.route('/api/adv/rooms/', methods=['GET'])
 def rooms():

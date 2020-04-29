@@ -1,11 +1,83 @@
+# Possibly Helpful Notes 
+ The following are notes that will hopefully be of use to understand 
+ how to get the postgresql database running LOCALLY, we will have to figure out how to get the database running on HEROKU sometime on Wed or Thursday morning at the latest
+## Setup
+(the following is SETUP stuff for me to remember how to get my virtual environment running since pipenv is currently giving me issues, need to figure out soon)
+
+python3 -m venv env 
+
+source env/bin/activate
+
+pip3 install wheel
+
+pip3 install -r requirements.txt
+
+.env (Populate with values from pusher.com account)
+
+PUSHER_APP_ID = ""
+
+PUSHER_KEY = ""
+
+PUSHER_SECRET = ""
+
+PUSHER_CLUSTER = ""
+
+DB_URL = postgresql://webuser:webuserpassword@localhost
+
+flask run
+
+#### Postgres
+(This is all of the important stuff you need to know to get the local postgresql database setup)
+
+(I believe you will most likely need to install postgresql if you don't have it already, please look into it as our operating systems seem to differ greatly)
+
+Example of the differences for me on ubuntu is how I actually have to get it running and do stuff initially with sudo
+
+Assuming Postgres is running (on Ubuntu)...
+
+sudo -u postgres psql
+
+create database game;
+
+create user webuser with encrypted password 'webuserpassword';
+
+grant all privileges on database game to webuser;
+
+psql --host=localhost --dbname=game --username=webuser
+
+#### Python Install/Setup
+(You will need these packages if you don't already)
+Please DO NOT do pip3 install, please do pipenv install instead if you are using pipenv to handle virtual environments
+
+pipenv (or pip3) install psycopg2-binary
+
+pipenv (or pip3) install Flask-SQLAlchemy
+
+pipenv (or pip3) install Flask-Script
+
+pip3 freeze > requirements.txt (I believe you only need to do this if you aren't doing things with pipenv)
+
+#### DB Migrations
+You will need to do this to manage migrations
+
+(I believe this only needs to be ran once to initialize stuff, where it will genereate that migrations directory with all of those other files)
+python3 manage.py db init
+
+(Run this after adding a new model to database)
+python manage.py db migrate
+
+(Run this after you ran the above script)
+python manage.py db upgrade
+
 # CS Build Week 1
 
-For your first CS Build Week, you will be building an interactive ***Multi-User Dungeon (MUD)*** client and server in groups. To succeed with this project, you will be applying knowledge you've learned throughout the first part of CS to this project.
+For your first CS Build Week, you will be building an interactive **_Multi-User Dungeon (MUD)_** client and server in groups. To succeed with this project, you will be applying knowledge you've learned throughout the first part of CS to this project.
 
 You should treat this like a real-world job assignment with your instructor as the client. Like in the real world, you may not be given all the information you need to complete the assignment up front. It is your responsibility to understand the requirements and ask questions if anything is unclear (UPER) before jumping into the code.
 
 ### What is a MUD?
->A MUD...is a multiplayer real-time virtual world, usually text-based. MUDs combine elements of role-playing games, hack and slash, player versus player, interactive fiction, and online chat. Players can read or view descriptions of rooms, objects, other players, non-player characters, and actions performed in the virtual world. Players typically interact with each other and the world by typing commands that resemble a natural language. - Wikipedia
+
+> A MUD...is a multiplayer real-time virtual world, usually text-based. MUDs combine elements of role-playing games, hack and slash, player versus player, interactive fiction, and online chat. Players can read or view descriptions of rooms, objects, other players, non-player characters, and actions performed in the virtual world. Players typically interact with each other and the world by typing commands that resemble a natural language. - Wikipedia
 
 With the adventure game built in previous weeks, you have already created an application containing some of these elements (rooms, descriptions, objects, players, etc.). In this project, we will be expanding these worlds to be more interactive, provide new actions for players, display world info on a professional client site, and run the world's server on a hosted site to allow multi-player functionality.
 
@@ -13,14 +85,11 @@ With the adventure game built in previous weeks, you have already created an app
 
 Each team is responsible for building and deploying a functional MUD server, migrating a unique world onto that server, and creating a visualization and navigation client interface. We provide starter Flask code with much of the server functionality implemented.
 
-
 ### Server
-
 
 #### 1. Learn Flask
 
 In Sprint 1, you learned a new language (Python) and built an interactive world with it. During this project, you will be learning a new REST API framework (Flask) and building a more interesting world.
-
 
 #### 2. Implement Login
 
@@ -28,29 +97,26 @@ You have been given code for Registration but will need to implement login and t
 
 Token authentication should be identical to the Django version of the project. As in, registration and login should return 40-character authentication key which must be passed in the header of every subsequent authenticated API request.
 
-
 #### 3. Implement Item classes
 
 Similar to your Intro to Python adventure project, the Item base class should be able to be picked up and dropped, bought and sold. You are required to have at least 2 types of Item subclasses.
 
 Suggestions for item subclasses:
-  - Food
-  - Clothing
-  - Light Source
-  - Weapon
 
+- Food
+- Clothing
+- Light Source
+- Weapon
 
 #### 4. Implement Store
 
 You must create a store where items can be bought and sold.
-
 
 #### 5. Implement Pusher Websockets
 
 Your server should create websocket connections with each client upon initialization and broadcast messages where appropriate.
 
 This NOT a stretch goal and is required for MVP.
-
 
 #### 6. Create an interesting world on the server
 
@@ -60,11 +126,9 @@ Your world should contain a MINIMUM of 100 connected rooms.
 
 You will also need to implement a GET `rooms` API endpoint for clients to fetch all rooms to display a map on the frontend.
 
-
 #### 7. Deploy a Flask LambdaMUD server
 
 Research and deploy your Flask server on Heroku.
-
 
 ### Client
 
@@ -88,55 +152,58 @@ Create an interface to pick up and drop items, and buy and sell them from a stor
 
 This NOT a stretch goal and is required for MVP.
 
-
-
 ## API Requirements
 
 These are implemented on the test server: `https://lambda-mud-test.herokuapp.com/`.
 
 ### Registration
-* `curl -X POST -H "Content-Type: application/json" -d '{"username":"testuser", "password1":"testpassword", "password2":"testpassword"}' localhost:8000/api/registration/`
-* Response:
-  * `{"key":"6b7b9d0f33bd76e75b0a52433f268d3037e42e66"}`
+
+- `curl -X POST -H "Content-Type: application/json" -d '{"username":"testuser", "password1":"testpassword", "password2":"testpassword"}' localhost:8000/api/registration/`
+- Response:
+  - `{"key":"6b7b9d0f33bd76e75b0a52433f268d3037e42e66"}`
 
 ### Login
-* Request:
-  * `curl -X POST -H "Content-Type: application/json" -d '{"username":"testuser", "password":"testpassword"}' localhost:8000/api/login/`
-* Response:
-  * `{"key":"6b7b9d0f33bd76e75b0a52433f268d3037e42e66"}`
+
+- Request:
+  - `curl -X POST -H "Content-Type: application/json" -d '{"username":"testuser", "password":"testpassword"}' localhost:8000/api/login/`
+- Response:
+  - `{"key":"6b7b9d0f33bd76e75b0a52433f268d3037e42e66"}`
 
 ### Initialize
-* Request:  (Replace token string with logged in user's auth token)
-  * `curl -X GET -H 'Authorization: Token 6b7b9d0f33bd76e75b0a52433f268d3037e42e66' localhost:8000/api/adv/init/`
-* Response:
-  * `{"uuid": "c3ee7f04-5137-427e-8591-7fcf0557dd7b", "name": "testuser", "title": "Outside Cave Entrance", "description": "North of you, the cave mount beckons", "players": []}`
+
+- Request: (Replace token string with logged in user's auth token)
+  - `curl -X GET -H 'Authorization: Token 6b7b9d0f33bd76e75b0a52433f268d3037e42e66' localhost:8000/api/adv/init/`
+- Response:
+  - `{"uuid": "c3ee7f04-5137-427e-8591-7fcf0557dd7b", "name": "testuser", "title": "Outside Cave Entrance", "description": "North of you, the cave mount beckons", "players": []}`
 
 ### Move
-* Request:  (Replace token string with logged in user's auth token)
-  * `curl -X POST -H 'Authorization: Token 6b7b9d0f33bd76e75b0a52433f268d3037e42e66' -H "Content-Type: application/json" -d '{"direction":"n"}' localhost:8000/api/adv/move/`
-* Response:
-  * `{"name": "testuser", "title": "Foyer", "description": "Dim light filters in from the south. Dusty\npassages run north and east.", "players": [], "error_msg": ""}`
-* Pusher broadcast (stretch):
-  * Players in previous room receive a message: `<name> has walked north.`
-  * Players in next room receive a message: `<name> has entered from the south.`
+
+- Request: (Replace token string with logged in user's auth token)
+  - `curl -X POST -H 'Authorization: Token 6b7b9d0f33bd76e75b0a52433f268d3037e42e66' -H "Content-Type: application/json" -d '{"direction":"n"}' localhost:8000/api/adv/move/`
+- Response:
+  - `{"name": "testuser", "title": "Foyer", "description": "Dim light filters in from the south. Dusty\npassages run north and east.", "players": [], "error_msg": ""}`
+- Pusher broadcast (stretch):
+  - Players in previous room receive a message: `<name> has walked north.`
+  - Players in next room receive a message: `<name> has entered from the south.`
 
 ### Say
-* Request:  (Replace token string with logged in user's auth token)
-  * `curl -X POST -H 'Authorization: Token 6b7b9d0f33bd76e75b0a52433f268d3037e42e66' -H "Content-Type: application/json" -d '{"message":"Hello, world!"}' localhost:8000/api/adv/say/`
-* Pusher broadcast:
-  * Players in current room receive a message: `<name> says "Hello, world!"`
+
+- Request: (Replace token string with logged in user's auth token)
+  - `curl -X POST -H 'Authorization: Token 6b7b9d0f33bd76e75b0a52433f268d3037e42e66' -H "Content-Type: application/json" -d '{"message":"Hello, world!"}' localhost:8000/api/adv/say/`
+- Pusher broadcast:
+  - Players in current room receive a message: `<name> says "Hello, world!"`
 
 ## Pusher
 
 WebSocket is a computer communications protocol, providing full-duplex communication channels over a single TCP connection. You may use the Pusher service to handle the WebSocket connections as a stretch goal for your project. You can read more about them [here](https://pusher.com/websockets).
 
 ### Set up a Pusher account
-* Sign up for a free account on pusher.com
-* Create a new app
-* Take note of your credentials
-  * app_id, key, secret, cluster
-* Look through the provided sample code and documentation
 
+- Sign up for a free account on pusher.com
+- Create a new app
+- Take note of your credentials
+  - app_id, key, secret, cluster
+- Look through the provided sample code and documentation
 
 ## FAQs and Troubleshooting
 
@@ -172,11 +239,9 @@ What data do you need to implement this? A list of rooms, their exits, maybe the
 
 I'll leave that to you to determine.
 
-
 ### 4. What is Pusher?
 
 Pusher is a cross-platform websocket library. This will allow you to turn your app into a real MUD with live push notifications to your client. You can consider integration to be a stretch goal but it's worth the effort if you have the time: websockets are powerful!
-
 
 ### 5. What will the `rooms` API endpoint look like?
 
