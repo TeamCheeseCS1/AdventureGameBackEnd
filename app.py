@@ -11,8 +11,10 @@ from room import Room
 from player import Player
 from world import World
 
-from models import *
 from flask_sqlalchemy import SQLAlchemy
+
+from world import test
+
 
 # Look up decouple for config variables
 pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
@@ -25,24 +27,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///game.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-
-class Player(db.Model):
-    __tablename__ = 'player'
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(), nullable=False)
-    password = db.Column(db.String(), nullable=False)
-    location_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=True)
-
-    def __init__(self, username, password, location_id=None):
-        self.username = username
-        self.password = password
-        self.location_room_id = location_id
-
-    def __repr__(self):
-        return '<id {}>'.format(self.id)
-
-
 class Room(db.Model):
     __tablename__ = 'room'
 
@@ -54,8 +38,7 @@ class Room(db.Model):
     exit_west_room_id = db.Column(db.Integer, nullable=True)
     exit_east_room_id = db.Column(db.Integer, nullable=True)
 
-    def __init__(self, title, description, exit_north_room_id, exit_south_room_id, exit_west_room_id,
-                 exit_east_room_id):
+    def __init__(self, title, description, exit_north_room_id, exit_south_room_id, exit_west_room_id, exit_east_room_id):
         self.title = title
         self.description = description
         self.exit_north_room_id = exit_north_room_id
@@ -66,6 +49,34 @@ class Room(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
+
+class Player(db.Model):
+    __tablename__ = 'player'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(), nullable=False)
+    password = db.Column(db.String(), nullable=False)
+    location_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=True)
+
+    def __init__(self, username, password, location_id):
+        self.username = username
+        self.result_all = password
+        self.result_no_stop_words = location_id
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
+
+class Shop(db.Model):
+    __tablename__ = 'shop'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(), unique=True, nullable=False)
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
 
 class Item(db.Model):
     __tablename__ = 'item'
@@ -81,19 +92,6 @@ class Item(db.Model):
         self.location_room_id = location_room_id
         self.player_id = player_id
         self.shop_id = shop_id
-
-    def __repr__(self):
-        return '<id {}>'.format(self.id)
-
-
-class Shop(db.Model):
-    __tablename__ = 'shop'
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(), unique=True, nullable=False)
-
-    def __init__(self, name):
-        self.name = name
 
     def __repr__(self):
         return '<id {}>'.format(self.id)
@@ -200,21 +198,25 @@ def move():
 
 @app.route('/api/adv/take/', methods=['POST'])
 def take_item():
-    # IMPLEMENT THIS
+    # request item from room
+    # if none return appropriate response
+    #  put into player inventory
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
 
 @app.route('/api/adv/drop/', methods=['POST'])
 def drop_item():
-    # IMPLEMENT THIS
+    # request item from player inventory
+    # if none return error
+    # put into room inventory
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
 
 @app.route('/api/adv/inventory/', methods=['GET'])
 def inventory():
-    # IMPLEMENT THIS
+    # request items from player inventory
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
@@ -239,7 +241,20 @@ def rooms():
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
+rooms = test.create_world()
+
+for room_id, room in rooms.items():
+    n_to = room.n_to.id if room.n_to else None
+    s_to = room.s_to.id if room.s_to else None
+    e_to = room.e_to.id if room.e_to else None
+    w_to = room.w_to.id if room.w_to else None
+    new_room = Room(title=room.name, description=room.description, exit_north_room_id=n_to,
+                           exit_south_room_id=s_to,
+                           exit_west_room_id=w_to, exit_east_room_id=e_to)
+
+    db.session.add(new_room)
+    db.session.commit()
 
 # Run the program on port 5000
 if __name__ == '__main__':
-    app.run(config('PORT'))
+    app.run(port=config('PORT'))

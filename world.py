@@ -4,6 +4,7 @@ import random
 import math
 import bcrypt
 
+
 class World:
     def __init__(self):
         self.starting_room = None
@@ -49,34 +50,63 @@ class World:
 
     def create_world(self):
         # UPDATE THIS:
+
         # Should create 100 procuedurally generated rooms
-        self.rooms = {
-            'outside':  Room("Outside Cave Entrance",
-                             "North of you, the cave mount beckons", 1, 1, 1),
+        #build 100 rooms in 10 x 10 grid
+        # each room has an id, exits, a description, x and y position
+        desc = ["A steep cliff appears before you, falling into the darkness",
+            "Children are laughing playing in piles of rubbish",
+            "It smells like Satan's bathroom here",
+            "You see piles of refuse as far as the eye can see",
+            """There are mountains of trash as far as you can see, and humid air burns your nostrils""",
+            """It's dark and musty here, and now God has abandoned you""",
+            """All around you are wads of used tissues - in the distance you hear yodeling""",
+            """Waste surrounds you as you sink neck-deep into filth"""]
+        names =["Central Park", "Abandoned Alley", "Central Playground",
+            "Hospital","School", "Seedy motel", "Truck stop bathroom",
+            "Confession booth","Your uncle Steve's basement","Sommerton Beach",
+            "Jonestown Lawn"]
+        room_id = 0
+        #build all rooms with names and descriptions
 
-            'foyer':    Room("Foyer", """Dim light filters in from the south. Dusty
-        passages run north and east.""", 2, 1, 2),
+        self.rooms = {str(x):Room(names[random.randint(0,len(names) -1)], desc[random.randint(0, len(desc) - 1)], x) for x in range(1, 101)}
+        #for each position on a 10 x 10 grid
+        for y in range(10):
+            for x in range(10):
+                room_id +=1
+                #add position information to each room
+                self.rooms[str(room_id)].x = x
+                self.rooms[str(room_id)].y = y
+                #connect rooms
+                #west
+                if x > 0:
+                    self.rooms[str(room_id)].connect_rooms('w', self.rooms[str(room_id - 1)])
+                #east
+                if x < 9:
+                    self.rooms[str(room_id)].connect_rooms('e', self.rooms[str(room_id + 1)])
+                #north
+                if y > 0:
+                    self.rooms[str(room_id)].connect_rooms('s', self.rooms[str(room_id - 10)])
+                #south
+                if y < 9:
+                    self.rooms[str(room_id)].connect_rooms('n', self.rooms[str(room_id + 10)])
 
-            'overlook': Room("Grand Overlook", """A steep cliff appears before you, falling
-        into the darkness. Ahead to the north, a light flickers in
-        the distance, but there is no way across the chasm.""", 3, 1, 3),
+                # # testing Output code
+                # print(self.rooms[str(room_id)].id, self.rooms[str(room_id)].name,
+                #     "'", self.rooms[str(room_id)].description, "'",
+                #     '\n North:', self.rooms[str(room_id)].n_to, '\nSouth:',
+                #     self.rooms[str(room_id)].s_to, '\nEast:',
+                #     self.rooms[str(room_id)].e_to, '\nWest:', self.rooms[str(room_id)].w_to,
+                #     '\nx:', self.rooms[str(room_id)].x, 'y:', self.rooms[str(room_id)].y)
 
-            'narrow':   Room("Narrow Passage", """The narrow passage bends here from west
-        to north. The smell of gold permeates the air.""", 4, 2, 2),
+        """for room_id,room in self.rooms.items():
 
-            'treasure': Room("Treasure Chamber", """You've found the long-lost treasure
-        chamber! Sadly, it has already been completely emptied by
-        earlier adventurers. The only exit is to the south.""", 5, 2, 3),
-        }
-
-        # Link rooms together
-        self.rooms['outside'].connect_rooms('n', self.rooms['foyer'])
-        self.rooms['foyer'].connect_rooms('n', self.rooms['overlook'])
-        self.rooms['foyer'].connect_rooms('e', self.rooms['narrow'])
-        self.rooms['narrow'].connect_rooms('n', self.rooms['treasure'])
-
-        self.starting_room = self.rooms['outside']
+            new_room = Maproom( title=room.name, description=room.description, exit_north_room_id=room.n_to, exit_south_room_id=room.s_to,
+                                exit_west_room_id=room.w_to, exit_east_room_id=room.e_to)
+            db.session.add(new_room)
+            db.commit()"""
 
 
-
-
+        self.starting_room = self.rooms[str(random.randint(1, 100))]
+        return self.rooms
+test = World()
