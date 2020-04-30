@@ -2,13 +2,18 @@ import hashlib
 import json
 from time import time
 from uuid import uuid4
+import random
+from flask_jwt import JWT, jwt_required, current_identity
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+import datetime
+from flask_bcrypt import Bcrypt
 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, make_response
 from pusher import Pusher
 from decouple import config
 
 from room import Room
-from player import Player
 from world import World
 
 from models import *
@@ -22,12 +27,12 @@ pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
     'PUSHER_KEY'), secret=config('PUSHER_SECRET'), cluster=config('PUSHER_CLUSTER'))
 
 world = World()
-
+JWT_SECRET = config('SECRET')
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///gametest.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
+Bcrypt = Bcrypt(app)
 
 class Player(db.Model):
     __tablename__ = 'player'
@@ -153,18 +158,47 @@ def register():
 
 
     return {},200
-
+# users = Player.query.order_by(Player.id).all()
+# for p in users: 
+#     if p.location_room_id == Room.id:
+#         players = []
+#         players.append(p)
+#         print(players)
 
 @app.route('/')
 def root():
     return "nothin"
-
+def get_room_players(users, player):
+    players = []
+    for u in users:
+        if u.location_room_id == player.location_room_id:
+            players.append(u.username)
+    return players
 
 @app.route('/api/login/', methods=['POST'])
 def login():
-    # IMPLEMENT THIS
-    response = {'error': "Not implemented"}
-    return jsonify(response), 400
+    req = request.json
+    user = Player.query.filter_by(username=req["username"]).first()
+    players = Player.query.all()
+    if user and Bcrypt.check_password_hash(user.password, req["password"]):
+        token = jwt.encode({'id': user.id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60)}, 'JWT_SECRET')
+
+
+        user.location_room_id = random.randint(1, 100)
+        db.session.commit()
+        fun_results = get_room_players(players, user)
+        print(fun_results)
+        response = {
+            'username': user.username,
+            'key': token.decode("ascii"),
+            'id': user.id,
+            'location_room_id': user.location_room_id,
+            'players': fun_results
+        }
+        return jsonify(response), 200
+    else:
+        return make_response("Invalid Credentials provided", 401)
+
 
 
 @app.route('/api/adv/init/', methods=['GET'])
