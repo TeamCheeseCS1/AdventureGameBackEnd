@@ -168,6 +168,7 @@ def register():
 @app.route('/')
 def root():
     return "nothin"
+
 def get_room_players(users, player):
     players = []
     for u in users:
@@ -217,30 +218,96 @@ def init():
 
 @app.route('/api/adv/move/', methods=['POST'])
 def move():
-    player = get_player_by_header(world, request.headers.get("Authorization"))
-    if player is None:
-        response = {'error': "Malformed auth header"}
-        return jsonify(response), 500
-
+    # player = get_player_by_header(world, request.headers.get("Authorization"))
+    # if player is None:
+    #     response = {'error': "Malformed auth header"}
+    #     return jsonify(response), 500
     values = request.get_json()
-    required = ['direction']
-
+    required = ['direction', 'username']
     if not all(k in values for k in required):
         response = {'message': "Missing Values"}
         return jsonify(response), 400
-
+    user = Player.query.filter_by(username=values["username"]).first()
+    print(user.location_room_id)
+    next_id = user.location_room_id
+    room = Room.query.filter_by(id=next_id).first()
     direction = values.get('direction')
-    if player.travel(direction):
-        response = {
-            'title': player.current_room.name,
-            'description': player.current_room.description,
-        }
-        return jsonify(response), 200
-    else:
-        response = {
-            'error': "You cannot move in that direction.",
-        }
-        return jsonify(response), 500
+    print(room)
+    players = Player.query.all()
+
+    players_list = get_room_players(players, user)
+    if direction == "n":
+        if room.exit_north_room_id:
+            print(Room)
+            
+            n_room = Room.query.filter_by(id=room.exit_north_room_id).first()
+            user.location_room_id = room.exit_north_room_id
+            db.session.commit()
+            response = {
+            'title': n_room.title,
+            'description': n_room.description,
+            'players': players_list,
+            'current_location_id': user.location_room_id
+            # 'items': items...
+            }
+            return jsonify(response), 200
+        else:
+            response = {
+            'error_msg': "You cannot move in that direction.",
+            }
+            return jsonify(response), 500
+    elif direction == "s":
+        if room.exit_south_room_id:
+            s_room = Room.query.filter_by(id=room.exit_south_room_id).first()
+            user.location_room_id = room.exit_south_room_id
+            db.session.commit()
+            response = {
+            'title': s_room.title,
+            'description': s_room.description,
+            'players': players_list,
+            # 'items': items...
+            }
+            return jsonify(response), 200
+        else:
+            response = {
+            'error_msg': "You cannot move in that direction.",
+            }
+            return jsonify(response), 500
+    elif direction == "e":
+        if room.exit_east_room_id:
+            e_room = Room.query.filter_by(id=room.exit_east_room_id).first()
+            user.location_room_id = room.exit_east_room_id
+            db.session.commit()
+            response = {
+            'title': e_room.title,
+            'description': e_room.description,
+            'players': players_list,
+            # 'players': player.current_room...,
+            # 'items': items...
+            }
+            return jsonify(response), 200
+        else:
+            response = {
+            'error_msg': "You cannot move in that direction.",
+            }
+            return jsonify(response), 500
+    elif direction == "w":
+        if room.exit_west_room_id:
+            w_room = Room.query.filter_by(id=room.exit_west_room_id).first()
+            user.location_room_id = room.exit_west_room_id
+            db.session.commit()
+            response = {
+            'title': w_room.title,
+            'description': w_room.description,
+            'players': players_list,
+            # 'items': items...
+            }
+            return jsonify(response), 200
+        else:
+            response = {
+            'error_msg': "You cannot move in that direction.",
+            }
+            return jsonify(response), 500
 
 
 @app.route('/api/adv/take/', methods=['POST'])
