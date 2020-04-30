@@ -1,4 +1,4 @@
-#from app import db
+"""#from app import db
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 
@@ -75,4 +75,4 @@ class Shop(db.Model):
         self.name = name
 
     def __repr__(self):
-        return '<id {}>'.format(self.id)
+        return '<id {}>'.format(self.id)"""
