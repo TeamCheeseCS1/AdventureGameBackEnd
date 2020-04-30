@@ -15,6 +15,7 @@ from models import *
 from flask_sqlalchemy import SQLAlchemy
 
 from world import test
+import bcrypt
 
 # Look up decouple for config variables
 pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
@@ -137,15 +138,21 @@ def register():
     password1 = values.get('password1')
     password2 = values.get('password2')
 
-    new_user = Player(username=username, password=password1, location_id=None)
+    if password1 != password2:
+        return {'error': "Passwords do not match"}
+    elif len(username) <= 2:
+        return {'error': "Username must be longer than 2 characters"}
+    elif len(password1) <= 5:
+        return {'error': "Password must be longer than 5 characters"}
+
+    password_hash = bcrypt.hashpw(password1.encode(), bcrypt.gensalt())
+
+    new_user = Player(username=username, password=password_hash, location_id=None)
     db.session.add(new_user)
     db.session.commit()
 
-    response = world.add_player(username, password1, password2)
-    if 'error' in response:
-        return jsonify(response), 500
-    else:
-        return jsonify(response), 200
+
+    return {},200
 
 
 @app.route('/')
