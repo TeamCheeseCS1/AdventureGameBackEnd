@@ -14,6 +14,8 @@ from world import World
 from models import *
 from flask_sqlalchemy import SQLAlchemy
 
+from world import test
+
 # Look up decouple for config variables
 pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
     'PUSHER_KEY'), secret=config('PUSHER_SECRET'), cluster=config('PUSHER_CLUSTER'))
@@ -21,7 +23,7 @@ pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
 world = World()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///game.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///gametest.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -76,11 +78,13 @@ class Item(db.Model):
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
     shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=True)
 
+
     def __init__(self, name, location_room_id, player_id, shop_id):
         self.name = name
         self.location_room_id = location_room_id
         self.player_id = player_id
         self.shop_id = shop_id
+
 
     def __repr__(self):
         return '<id {}>'.format(self.id)
@@ -242,6 +246,25 @@ def rooms():
     # IMPLEMENT THIS
     response = {'error': "Not implemented"}
     return jsonify(response), 400
+
+@app.route("/generate")
+def generate():
+    rooms = test.create_world()
+
+    for room_id, room in rooms.items():
+        n_to = room.n_to.id if room.n_to else None
+        s_to = room.s_to.id if room.s_to else None
+        e_to = room.e_to.id if room.e_to else None
+        w_to = room.w_to.id if room.w_to else None
+        new_room = Room(title=room.name, description=room.description, exit_north_room_id=n_to,
+                                   exit_south_room_id=s_to,
+                                   exit_west_room_id=w_to, exit_east_room_id=e_to)
+        try:
+            db.session.add(new_room)
+            db.session.commit()
+        except Exception:
+            print("An exception occurred",Exception)
+    return {},200
 
 
 # Run the program on port 5000

@@ -99,4 +99,5 @@ class World:
                 #     '\nx:', self.rooms[str(room_id)].x, 'y:', self.rooms[str(room_id)].y)
 
         self.starting_room = self.rooms[str(random.randint(1, 100))]
+        return self.rooms
 test = World()
