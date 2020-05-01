@@ -118,16 +118,16 @@ def after_request(response):
     return response
 
 
-def get_player_by_header(world, auth_header):
-    if auth_header is None:
-        return None
+# def get_player_by_header(world, auth_header):
+#     if auth_header is None:
+#         return None
 
-    auth_key = auth_header.split(" ")
-    if auth_key[0] != "Token" or len(auth_key) != 2:
-        return None
+#     auth_key = auth_header.split(" ")
+#     if auth_key[0] != "Token" or len(auth_key) != 2:
+#         return None
 
-    player = world.get_player_by_auth(auth_key[1])
-    return player
+#     player = world.get_player_by_auth(auth_key[1])
+#     return player
 
 
 @app.route('/api/registration/', methods=['POST'])
@@ -202,18 +202,18 @@ def login():
 
 
 
-@app.route('/api/adv/init/', methods=['GET'])
-def init():
-    player = get_player_by_header(world, request.headers.get("Authorization"))
-    if player is None:
-        response = {'error': "Malformed auth header"}
-        return jsonify(response), 500
+# @app.route('/api/adv/init/', methods=['GET'])
+# def init():
+#     player = get_player_by_header(world, request.headers.get("Authorization"))
+#     if player is None:
+#         response = {'error': "Malformed auth header"}
+#         return jsonify(response), 500
 
-    response = {
-        'title': player.current_room.name,
-        'description': player.current_room.description,
-    }
-    return jsonify(response), 200
+#     response = {
+#         'title': player.current_room.name,
+#         'description': player.current_room.description,
+#     }
+#     return jsonify(response), 200
 
 
 @app.route('/api/adv/move/', methods=['POST'])
@@ -335,18 +335,18 @@ def inventory():
     return jsonify(response), 400
 
 
-@app.route('/api/adv/buy/', methods=['POST'])
-def buy_item():
-    # IMPLEMENT THIS
-    response = {'error': "Not implemented"}
-    return jsonify(response), 400
+# @app.route('/api/adv/buy/', methods=['POST'])
+# def buy_item():
+#     # IMPLEMENT THIS
+#     response = {'error': "Not implemented"}
+#     return jsonify(response), 400
 
 
-@app.route('/api/adv/sell/', methods=['POST'])
-def sell_item():
-    # IMPLEMENT THIS
-    response = {'error': "Not implemented"}
-    return jsonify(response), 400
+# @app.route('/api/adv/sell/', methods=['POST'])
+# def sell_item():
+#     # IMPLEMENT THIS
+#     response = {'error': "Not implemented"}
+#     return jsonify(response), 400
 
 
 @app.route('/api/adv/rooms/', methods=['GET'])
