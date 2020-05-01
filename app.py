@@ -36,7 +36,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 Bcrypt = Bcrypt(app)
 
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 players_online_list = []
 
 @socketio.on('logout', namespace='/players') 
