@@ -41,10 +41,10 @@ Bcrypt = Bcrypt(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 players_online_list = []
 
-@socketio.on('logout') 
+@socketio.on('logout')
 def user_leaving(user):
     players_online_list.remove(user)
-    emit('player', {'data': players_online_list})
+    emit('player', {'data': players_online_list}, broadcast=True)
 
 class Player(db.Model):
     __tablename__ = 'player'
