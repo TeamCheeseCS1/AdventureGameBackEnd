@@ -134,7 +134,7 @@ def after_request(response):
 def register():
     values = request.get_json()
     required = ['username', 'password1', 'password2']
-
+    
     if not all(k in values for k in required):
         response = {'message': "Missing Values"}
         return jsonify(response), 400
@@ -188,13 +188,17 @@ def login():
         user.location_room_id = random.randint(1, 100)
         db.session.commit()
         fun_results = get_room_players(players, user)
+        room = Room.query.filter_by(id=user.location_room_id).first()
+        print(room)
         print(fun_results)
         response = {
             'username': user.username,
             'key': token.decode("ascii"),
             'id': user.id,
             'location_room_id': user.location_room_id,
-            'players': fun_results
+            'players': fun_results,
+            'room_description': room.description,
+            'title': room.title
         }
         return jsonify(response), 200
     else:
@@ -228,27 +232,23 @@ def move():
         response = {'message': "Missing Values"}
         return jsonify(response), 400
     user = Player.query.filter_by(username=values["username"]).first()
-    print(user.location_room_id)
     next_id = user.location_room_id
     room = Room.query.filter_by(id=next_id).first()
     direction = values.get('direction')
-    print(room)
     players = Player.query.all()
-
     players_list = get_room_players(players, user)
     if direction == "n":
-        if room.exit_north_room_id:
-            print(Room)
-            
+        if room.exit_north_room_id:       
             n_room = Room.query.filter_by(id=room.exit_north_room_id).first()
             user.location_room_id = room.exit_north_room_id
             db.session.commit()
+            nsew = [n_room.exit_north_room_id, n_room.exit_south_room_id, n_room.exit_west_room_id, n_room.exit_east_room_id]
             response = {
             'title': n_room.title,
             'description': n_room.description,
             'players': players_list,
-            'current_location_id': user.location_room_id
-            # 'items': items...
+            'current_location_id': user.location_room_id,
+            'nsew': nsew
             }
             return jsonify(response), 200
         else:
@@ -261,10 +261,13 @@ def move():
             s_room = Room.query.filter_by(id=room.exit_south_room_id).first()
             user.location_room_id = room.exit_south_room_id
             db.session.commit()
+            nsew = [s_room.exit_north_room_id, s_room.exit_south_room_id, s_room.exit_west_room_id, s_room.exit_east_room_id]
             response = {
             'title': s_room.title,
             'description': s_room.description,
             'players': players_list,
+            'current_location_id': user.location_room_id,
+            'nsew': nsew
             # 'items': items...
             }
             return jsonify(response), 200
@@ -278,10 +281,13 @@ def move():
             e_room = Room.query.filter_by(id=room.exit_east_room_id).first()
             user.location_room_id = room.exit_east_room_id
             db.session.commit()
+            nsew = [e_room.exit_north_room_id, e_room.exit_south_room_id, e_room.west_east_room_id, e_room.exit_east_room_id]
             response = {
             'title': e_room.title,
             'description': e_room.description,
             'players': players_list,
+            'current_location_id': user.location_room_id,
+            'nsew': nsew
             # 'players': player.current_room...,
             # 'items': items...
             }
@@ -296,10 +302,13 @@ def move():
             w_room = Room.query.filter_by(id=room.exit_west_room_id).first()
             user.location_room_id = room.exit_west_room_id
             db.session.commit()
+            nsew = [w_room.exit_north_room_id, w_room.exit_south_room_id, w_room.exit_west_room_id, w_room.exit_east_room_id]
             response = {
             'title': w_room.title,
             'description': w_room.description,
             'players': players_list,
+            'current_location_id': user.location_room_id,
+            'nsew': nsew
             # 'items': items...
             }
             return jsonify(response), 200
@@ -374,6 +383,10 @@ def generate():
             print("An exception occurred",Exception)
     return {},200
 
+@app.route("/api/init")
+def initialize():
+    user = Player.query.filter_by
+    
 
 # Run the program on port 5000
 if __name__ == '__main__':
