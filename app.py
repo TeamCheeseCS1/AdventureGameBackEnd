@@ -15,7 +15,9 @@ from models import *
 from flask_sqlalchemy import SQLAlchemy
 
 from world import test
+from item import Item, Food, Garbage
 import bcrypt
+import random
 
 # Look up decouple for config variables
 pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
@@ -24,7 +26,7 @@ pusher = Pusher(app_id=config('PUSHER_APP_ID'), key=config(
 world = World()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///gametest.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///game.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -41,6 +43,34 @@ class Player(db.Model):
         self.username = username
         self.password = password
         self.location_room_id = location_id
+
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
+
+class Item(db.Model):
+    __tablename__ = "item"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(30), nullable=False)
+    room_location = db.Column(db.Integer, db.ForeignKey("room.id"),nullable=False)
+
+    def __init__(self, name, room_num):
+        self.name = name
+        self.room_location = room_num
+    def __repr__(self):
+        return '<id {}>'.format(self.id)
+
+class Player_Item(db.Model):
+    __tablename__ = "player item"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    player_id = db.Column(db.Integer, nullable=False)
+    item_id = db.Column(db.Integer, nullable=False)
+
+
+    def __init__(self, player_id, item_id):
+        self.player_id = player_id
+        self.item_id = item_id
 
     def __repr__(self):
         return '<id {}>'.format(self.id)
@@ -69,26 +99,6 @@ class Room(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
-
-class Item(db.Model):
-    __tablename__ = 'item'
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(), nullable=False)
-    location_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=True)
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
-    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=True)
-
-
-    def __init__(self, name, location_room_id, player_id, shop_id):
-        self.name = name
-        self.location_room_id = location_room_id
-        self.player_id = player_id
-        self.shop_id = shop_id
-
-
-    def __repr__(self):
-        return '<id {}>'.format(self.id)
 
 
 class Shop(db.Model):
@@ -162,9 +172,29 @@ def root():
 
 @app.route('/api/login/', methods=['POST'])
 def login():
-    # IMPLEMENT THIS
-    response = {'error': "Not implemented"}
-    return jsonify(response), 400
+    req = request.json
+    user = Player.query.filter_by(username=req["username"]).first()
+    players = Player.query.all()
+    if user and Bcrypt.check_password_hash(user.password, req["password"]):
+        token = jwt.encode({'id': user.id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60)}, 'JWT_SECRET')
+        user.location_room_id = random.randint(1, 100)
+        db.session.commit()
+        fun_results = get_room_players(players, user)
+        room = Room.query.filter_by(id=user.location_room_id).first()
+        print(room)
+        print(fun_results)
+        response = {
+            'username': user.username,
+            'key': token.decode("ascii"),
+            'id': user.id,
+            'location_room_id': user.location_room_id,
+            'players': fun_results,
+            'room_description': room.description,
+            'title': room.title
+        }
+        return jsonify(response), 200
+    else:
+        return make_response("Invalid Credentials provided", 401)
 
 
 @app.route('/api/adv/init/', methods=['GET'])
@@ -209,13 +239,39 @@ def move():
         return jsonify(response), 500
 
 
-@app.route('/api/adv/take/', methods=['POST'])
+@app.route('/api/adv/take/')
 def take_item():
-    # request item from room
-    # if none return appropriate response
-    #  put into player inventory
-    response = {'error': "Not implemented"}
-    return jsonify(response), 400
+    player_data = Player.query.filter_by(id=1).first()
+    player_id = player_data.id
+    current = player_data.location_room_id
+    search = Item.query.filter_by(room_location=current)
+
+
+    item_name = "apple"
+    for item in search:
+        if item.name == item_name:
+            item_id = item.id
+
+            pick_up = Player_Item(player_id=player_id, item_id=item_id)
+            db.session.add(pick_up)
+            db.session.commit()
+
+    return "success"
+
+
+@app.route('/testcode')
+def testcode():
+    search_item = Item_vault.query.filter_by(location_room_id=12).first()
+    x = search_item.location_room_id
+    y = search_item.player_id
+
+    search_item.location_room_id = y
+    search_item.player_id = x
+    db.session.commit()
+
+    return {}
+
+
 
 
 @app.route('/api/adv/drop/', methods=['POST'])
@@ -254,7 +310,7 @@ def rooms():
     response = {'error': "Not implemented"}
     return jsonify(response), 400
 
-@app.route("/generate")
+@app.route("/generate/room")
 def generate():
     rooms = test.create_world()
 
@@ -271,7 +327,25 @@ def generate():
             db.session.commit()
         except Exception:
             print("An exception occurred",Exception)
-    return {},200
+    return {}
+
+@app.route("/generate/item")
+def generateItem():
+    fud = [Food(1, 'apple', 1), Garbage(15, 'tin can', 1), Garbage(16, 'aluminum can', 2)]
+    room = 1
+    while room < 101:
+        for x in fud:
+            item = Item(name=x.name, room_num=room)
+            item = Item(name=x.name, room_num=room)
+            item = Item(name=x.name, room_num=room)
+
+            db.session.add(item)
+
+            db.session.commit()
+        room += 1
+    return {}
+
+
 
 
 # Run the program on port 5000
