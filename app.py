@@ -50,7 +50,7 @@ class Player(db.Model):
     __tablename__ = 'player'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(), nullable=False)
+    username = db.Column(db.String(), nullable=False, unique=True)
     password = db.Column(db.String(), nullable=False)
     location_room_id = db.Column(db.Integer, db.ForeignKey('room.id'), nullable=True)
 
@@ -153,17 +153,23 @@ def after_request(response):
 
 @app.route('/api/registration/', methods=['POST'])
 def register():
-    values = request.get_json()
+    values = request.json
     required = ['username', 'password1', 'password2']
     
     if not all(k in values for k in required):
         response = {'message': "Missing Values"}
         return jsonify(response), 400
+    
 
-    username = values.get('username')
-    password1 = values.get('password1')
-    password2 = values.get('password2')
+    username = values["username"]
+    password1 = values["password1"]
+    password2 = values["password2"]
 
+    registered_users = Player.query.filter_by(username=values["username"]).first()
+    print(registered_users)
+    if registered_users is not None:
+        response = {'message': "User by that username already exists"}
+        return jsonify(response), 201
     if password1 != password2:
         return {'error': "Passwords do not match"}
     elif len(username) <= 2:
