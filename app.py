@@ -41,7 +41,7 @@ Bcrypt = Bcrypt(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 players_online_list = []
 
-@socketio.on('logout', namespace='/players') 
+@socketio.on('logout') 
 def user_leaving(user):
     players_online_list.remove(user)
     emit('player', {'data': players_online_list})
