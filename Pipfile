@@ -21,6 +21,7 @@ flask-jwt = "*"
 flask-bcrypt = "*"
 python-dotenv = "*"
 flask-socketio = "*"
+eventlet = "*"
 
 [requires]
 python_version = "3.7"
