@@ -8,12 +8,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO, emit
 
 from flask import Flask, jsonify, request, render_template, make_response
 from pusher import Pusher
 from decouple import config
 
-from room import Room
 from world import World
 
 from models import *
@@ -36,6 +36,14 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 Bcrypt = Bcrypt(app)
 
+socketio = SocketIO(app)
+players_online_list = []
+
+@socketio.on('logout', namespace='/players') 
+def user_leaving(user):
+    players_online_list.remove(user)
+    emit('player', {'data': players_online_list})
+
 class Player(db.Model):
     __tablename__ = 'player'
 
@@ -57,8 +65,8 @@ class Item(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(30), nullable=False)
-    room_location = db.Column(db.Integer, db.ForeignKey("room.id"),nullable=False)
-
+    room_location = db.Column(db.Integer, db.ForeignKey("room.id"),nullable=True)
+    
     def __init__(self, name, room_num):
         self.name = name
         self.room_location = room_num
@@ -66,11 +74,11 @@ class Item(db.Model):
         return '<id {}>'.format(self.id)
 
 class Player_Item(db.Model):
-    __tablename__ = "player item"
+    __tablename__ = "player_item"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    player_id = db.Column(db.Integer, nullable=False)
-    item_id = db.Column(db.Integer, nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey("player.id"), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey("item.id"), nullable=False)
 
 
     def __init__(self, player_id, item_id):
@@ -118,6 +126,7 @@ class Shop(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
+
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -144,7 +153,7 @@ def after_request(response):
 def register():
     values = request.get_json()
     required = ['username', 'password1', 'password2']
-
+    
     if not all(k in values for k in required):
         response = {'message': "Missing Values"}
         return jsonify(response), 400
@@ -186,19 +195,30 @@ def get_room_players(users, player):
             players.append(u.username)
     return players
 
+def get_room_items(items_list, player):
+    items = []
+    for i in items_list:
+        if i.room_location == player.location_room_id:
+            items.append(i.name)
+    return items
+
+
 @app.route('/api/login/', methods=['POST'])
 def login():
     req = request.json
     user = Player.query.filter_by(username=req["username"]).first()
     players = Player.query.all()
+    item_list = Item.query.all()
+
     if user and Bcrypt.check_password_hash(user.password, req["password"]):
         token = jwt.encode({'id': user.id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60)}, 'JWT_SECRET')
         user.location_room_id = random.randint(1, 100)
         db.session.commit()
+        items_result = get_room_items(item_list, user)
         fun_results = get_room_players(players, user)
         room = Room.query.filter_by(id=user.location_room_id).first()
-        print(room)
-        print(fun_results)
+
+        nsew = [room.exit_north_room_id, room.exit_south_room_id, room.exit_east_room_id, room.exit_west_room_id]
         response = {
             'username': user.username,
             'key': token.decode("ascii"),
@@ -206,8 +226,12 @@ def login():
             'location_room_id': user.location_room_id,
             'players': fun_results,
             'room_description': room.description,
-            'title': room.title
+            'title': room.title,
+            "nsew": nsew,
+            "items": items_result,
         }
+        players_online_list.append(user.username)
+        socketio.emit('player', {'data': players_online_list})
         return jsonify(response), 200
     else:
         return make_response("Invalid Credentials provided", 401)
@@ -239,27 +263,28 @@ def move():
         response = {'message': "Missing Values"}
         return jsonify(response), 400
     user = Player.query.filter_by(username=values["username"]).first()
-    print(user.location_room_id)
     next_id = user.location_room_id
     room = Room.query.filter_by(id=next_id).first()
     direction = values.get('direction')
-    print(room)
     players = Player.query.all()
-
+    
     players_list = get_room_players(players, user)
     if direction == "n":
-        if room.exit_north_room_id:
-            print(Room)
-            
+        if room.exit_north_room_id:       
             n_room = Room.query.filter_by(id=room.exit_north_room_id).first()
             user.location_room_id = room.exit_north_room_id
             db.session.commit()
+            nsew = [n_room.exit_north_room_id, n_room.exit_south_room_id, n_room.exit_east_room_id, n_room.exit_west_room_id]
+            item_list = Item.query.all()
+            items_result = get_room_items(item_list, user)
+
             response = {
             'title': n_room.title,
             'description': n_room.description,
             'players': players_list,
-            'current_location_id': user.location_room_id
-            # 'items': items...
+            'current_location_id': user.location_room_id,
+            'nsew': nsew,
+            'items': items_result
             }
             return jsonify(response), 200
         else:
@@ -272,10 +297,16 @@ def move():
             s_room = Room.query.filter_by(id=room.exit_south_room_id).first()
             user.location_room_id = room.exit_south_room_id
             db.session.commit()
+            nsew = [s_room.exit_north_room_id, s_room.exit_south_room_id, s_room.exit_east_room_id, s_room.exit_west_room_id]
+            item_list = Item.query.all()
+            items_result = get_room_items(item_list, user)
             response = {
             'title': s_room.title,
             'description': s_room.description,
             'players': players_list,
+            'current_location_id': user.location_room_id,
+            'nsew': nsew,
+            'items': items_result
             # 'items': items...
             }
             return jsonify(response), 200
@@ -289,12 +320,16 @@ def move():
             e_room = Room.query.filter_by(id=room.exit_east_room_id).first()
             user.location_room_id = room.exit_east_room_id
             db.session.commit()
+            nsew = [e_room.exit_north_room_id, e_room.exit_south_room_id, e_room.exit_east_room_id, e_room.exit_west_room_id]
+            item_list = Item.query.all()
+            items_result = get_room_items(item_list, user)
             response = {
             'title': e_room.title,
             'description': e_room.description,
             'players': players_list,
-            # 'players': player.current_room...,
-            # 'items': items...
+            'current_location_id': user.location_room_id,
+            'nsew': nsew,
+            'items': items_result
             }
             return jsonify(response), 200
         else:
@@ -307,11 +342,16 @@ def move():
             w_room = Room.query.filter_by(id=room.exit_west_room_id).first()
             user.location_room_id = room.exit_west_room_id
             db.session.commit()
+            nsew = [w_room.exit_north_room_id, w_room.exit_south_room_id, w_room.exit_east_room_id, w_room.exit_west_room_id]
+            item_list = Item.query.all()
+            items_result = get_room_items(item_list, user)
             response = {
             'title': w_room.title,
             'description': w_room.description,
             'players': players_list,
-            # 'items': items...
+            'current_location_id': user.location_room_id,
+            'nsew': nsew,
+            'items': items_result
             }
             return jsonify(response), 200
         else:
@@ -321,26 +361,34 @@ def move():
             return jsonify(response), 500
 
 
-@app.route('/api/adv/take/', methods=["POST"])
+@app.route('/api/adv/take/', endpoint='take', methods=["POST"])
 def take_item():
     values = request.json
     player_data = Player.query.filter_by(username=values["username"]).first()
     player_id = player_data.id
     current = player_data.location_room_id
     search = Item.query.filter_by(room_location=current).all()
-
-
     pick_this = Item.query.filter_by(name=values["item_name"]).first()
+    if not search:
+        response = {"message": "No items found"}
+        return jsonify(response), 201
     for item in search:
-        print(item.name, pick_this.name)
         if item.name == pick_this.name:
             picked_id = item.id
-
+            print(item.id)
+            picked_item = Item.query.get(picked_id)
+            print(picked_item.name)
             pick_up = Player_Item(player_id=player_id, item_id=picked_id)
             db.session.add(pick_up)
+            picked_item.room_location = None
             db.session.commit()
 
-    return "success"
+            response = {
+                "item": picked_item.name,
+                'item_id': picked_item.id,
+                'player_item_id': pick_up.id
+            }
+    return jsonify(response), 200
 
 
 @app.route('/testcode')
@@ -358,13 +406,12 @@ def testcode():
 
 
 
-@app.route('/api/adv/drop/', methods=['POST'])
+@app.route('/api/adv/drop/', endpoint='drop', methods=["POST"])
 def drop_item():
-    # request item from player inventory
-    # if none return error
-    # put into room inventory
-    response = {'error': "Not implemented"}
-    return jsonify(response), 400
+    values = request.json
+    Player_Item.query.filter_by(id=values["player_item_id"]).delete()
+    db.session.commit()
+    return {}, 200
 
 
 @app.route('/api/adv/inventory/', methods=['GET'])
@@ -431,7 +478,12 @@ def generateItem():
 
 
 
+@app.route("/api/init")
+def initialize():
+    user = Player.query.filter_by
+    
 
 # Run the program on port 5000
 if __name__ == '__main__':
     app.run(port=config('PORT'))
+    socketio.run(app)

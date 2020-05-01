@@ -20,6 +20,7 @@ pyjwt = "*"
 flask-jwt = "*"
 flask-bcrypt = "*"
 python-dotenv = "*"
+flask-socketio = "*"
 
 [requires]
 python_version = "3.7"
