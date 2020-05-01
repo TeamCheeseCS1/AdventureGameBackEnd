@@ -69,6 +69,20 @@ python manage.py db migrate
 (Run this after you ran the above script)
 python manage.py db upgrade
 
+##### DB for Heroku
+Since Heroku storage is ephemeral (ie temporary) and gets overwritten by each merge to master/deploy, we need to add `gametest.db` to the repo. We only want to add a new `gametest.db` when there are changes to the schema, otherwise we do **NOT** want to push `gametest.db` to master. Here is how to make this work:
+
+**Update DB Schema**
+1. Delete the migrations directory
+1. Run **ALL** the DB migration steps above
+1. Test to make sure the migrations work as expected (hit an endpoint that is impacted by the schema change)
+1. Remove `.db` from `.gitignore`
+1. Git add, commit, and push
+1. Test on Heroku to make sure the changes are working there (again, hit an endpoint on Heroko)
+1. Assuming it's all working, now add `.db` to `.gitignore`
+1. Git add, commit, and push
+  1. This will ensure that any local changes to `gametest.db` are not pushed
+
 # CS Build Week 1
 
 For your first CS Build Week, you will be building an interactive **_Multi-User Dungeon (MUD)_** client and server in groups. To succeed with this project, you will be applying knowledge you've learned throughout the first part of CS to this project.

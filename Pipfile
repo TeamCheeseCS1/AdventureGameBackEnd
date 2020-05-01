@@ -4,6 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pylint = "*"
 
 [packages]
 requests = "*"
@@ -15,6 +16,10 @@ bcrypt = "*"
 flask-migrate = "*"
 flask-script = "*"
 flask-sqlalchemy = "*"
+pyjwt = "*"
+flask-jwt = "*"
+flask-bcrypt = "*"
+python-dotenv = "*"
 
 [requires]
 python_version = "3.7"
