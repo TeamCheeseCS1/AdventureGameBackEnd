@@ -8,6 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO, emit
 
 from flask import Flask, jsonify, request, render_template, make_response
 from pusher import Pusher
@@ -34,6 +35,14 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///gametest.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 Bcrypt = Bcrypt(app)
+
+socketio = SocketIO(app)
+players_online_list = []
+
+@socketio.on('logout', namespace='/players') 
+def user_leaving(user):
+    players_online_list.remove(user)
+    emit('player', {'data': players_online_list})
 
 class Player(db.Model):
     __tablename__ = 'player'
@@ -117,6 +126,7 @@ class Shop(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
+
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -192,6 +202,7 @@ def get_room_items(items_list, player):
             items.append(i.name)
     return items
 
+
 @app.route('/api/login/', methods=['POST'])
 def login():
     req = request.json
@@ -219,6 +230,8 @@ def login():
             "nsew": nsew,
             "items": items_result,
         }
+        players_online_list.append(user.username)
+        socketio.emit('player', {'data': players_online_list})
         return jsonify(response), 200
     else:
         return make_response("Invalid Credentials provided", 401)
@@ -355,13 +368,11 @@ def take_item():
     player_id = player_data.id
     current = player_data.location_room_id
     search = Item.query.filter_by(room_location=current).all()
-
     pick_this = Item.query.filter_by(name=values["item_name"]).first()
-    if search is None:
+    if not search:
         response = {"message": "No items found"}
         return jsonify(response), 201
     for item in search:
-        # print(pick_this)
         if item.name == pick_this.name:
             picked_id = item.id
             print(item.id)
@@ -475,3 +486,4 @@ def initialize():
 # Run the program on port 5000
 if __name__ == '__main__':
     app.run(port=config('PORT'))
+    socketio.run(app)
